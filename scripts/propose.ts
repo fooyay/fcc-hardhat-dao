@@ -30,9 +30,30 @@ export async function propose(args: any[], functionToCall: string, proposalDescr
     }
 
     const proposalId = proposeReceipt.events[0].args.proposalId
-    let proposals = JSON.parse(fs.readFileSync(proposalsFile, "utf8"))
-    proposals[network.config.chainId!.toString()].push(proposalId.toString())
-    fs.writeFileSync(proposalsFile, JSON.stringify(proposals))
+    console.log(`Proposed with proposal ID: ${proposalId}`)
+
+    const proposalState = await governor.state(proposalId)
+    const proposalSnapshot = await governor.proposalSnapshot(proposalId)
+    const proposalDeadline = await governor.proposalDeadline(proposalId)
+    storeProposalId(proposalId)
+
+    console.log(`Current proposal state: ${proposalState}`)
+    console.log(`Current proposal snapshot: ${proposalSnapshot}`)
+    console.log(`Current proposal deadline: ${proposalDeadline}`)
+}
+
+function storeProposalId(proposalId: any) {
+    const chainId = network.config.chainId!.toString()
+    let proposals: any
+
+    if (fs.existsSync(proposalsFile)) {
+        proposals = JSON.parse(fs.readFileSync(proposalsFile, "utf8"))
+    } else {
+        proposals = {}
+        proposals[chainId] = []
+    }
+    proposals[chainId].push(proposalId.toString())
+    fs.writeFileSync(proposalsFile, JSON.stringify(proposals), "utf8")
 }
 
 propose([NEW_STORE_VALUE], FUNC, PROPOSAL_DESCRIPTION)
