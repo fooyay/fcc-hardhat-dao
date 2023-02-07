@@ -1,10 +1,11 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
 import { DeployFunction } from "hardhat-deploy/types"
 import { ethers } from "hardhat"
-// import { DeployFunction } from "hardhat-deploy/dist/types";
+import { networkConfig, developmentChains } from "../helper-hardhat-config"
+import verify from "../helper-functions"
 
 const deployGovernanceToken: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-    const { getNamedAccounts, deployments } = hre
+    const { getNamedAccounts, deployments, network } = hre
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
     log("Deploying Governance Token...")
@@ -12,11 +13,15 @@ const deployGovernanceToken: DeployFunction = async function (hre: HardhatRuntim
         from: deployer,
         args: [],
         log: true,
-        // waitConfirmations: 1,
+        waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
     })
-    // verify
     log(`Deployed governance token to address: ${governanceToken.address}`)
 
+    // verify
+    if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
+        await verify(governanceToken.address, [])
+    }
+    log(`Delegating to ${deployer}`)
     await delegate(governanceToken.address, deployer)
     log("Delegated!")
 }
@@ -29,3 +34,4 @@ const delegate = async (governanceTokenAddress: string, delegatedAccount: string
 }
 
 export default deployGovernanceToken
+deployGovernanceToken.tags = ["all", "governor"]
